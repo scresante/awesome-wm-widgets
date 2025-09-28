@@ -52,7 +52,8 @@ local function worker(user_args)
     local font = args.font or beautiful.font
 
     local onlogout = args.onlogout or function () awesome.quit() end
-    local onlock = args.onlock or function() awful.spawn.with_shell("i3lock") end
+    local onlock = args.onlock or function() awful.spawn.with_shell("i3lock-fancy-multimonitor") end
+    local onswitch = args.onswitch or function() awful.spawn.with_shell("dm-tool switch-to-greeter") end
     local onreboot = args.onreboot or function() awful.spawn.with_shell("reboot") end
     local onsuspend = args.onsuspend or function() awful.spawn.with_shell("systemctl suspend") end
     local onpoweroff = args.onpoweroff or function() awful.spawn.with_shell("shutdown now") end
@@ -60,6 +61,7 @@ local function worker(user_args)
     local menu_items = {
         { name = 'Log out', icon_name = 'log-out.svg', command = onlogout },
         { name = 'Lock', icon_name = 'lock.svg', command = onlock },
+        { name = 'Switch User', icon_name = 'switch.svg', command = onswitch},
         { name = 'Reboot', icon_name = 'refresh-cw.svg', command = onreboot },
         { name = 'Suspend', icon_name = 'moon.svg', command = onsuspend },
         { name = 'Power off', icon_name = 'power.svg', command = onpoweroff },

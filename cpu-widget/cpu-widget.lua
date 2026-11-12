@@ -185,6 +185,32 @@ local function worker(user_args)
     -- This part runs whenever the timer is fired.
     -- It therefore only runs when the popup is open.
     local cpus = {}
+
+    -- Pre-create tooltips for process rows to avoid leaking tooltip objects each tick.
+    -- Tooltip text is stored in process_cmd_texts and read via timer_function.
+    local NUM_PROCESS_ROWS = 10
+    local process_tooltips = {}
+    local process_cmd_texts = {}
+    local tooltip_attached_rows = {}
+
+    for idx = 1, NUM_PROCESS_ROWS do
+        process_cmd_texts[idx] = ""
+        process_tooltips[idx] = awful.tooltip {
+            mode = 'outside',
+            preferred_positions = {'bottom'},
+            timer_function = function()
+                local text = process_cmd_texts[idx] or ""
+                if text == "" then return "" end
+                if process_info_max_length > 0 and text:len() > process_info_max_length then
+                    text = text:sub(0, process_info_max_length - 3) .. '...'
+                end
+                return text
+                    :gsub('%s%-', '\n\t-')
+                    :gsub(':/', '\n\t\t:/')
+            end,
+        }
+    end
+
     popup_timer:connect_signal('timeout', function()
         awful.spawn.easy_async(CMD, function(stdout, _, _, _)
             local i = 1
@@ -232,7 +258,7 @@ local function worker(user_args)
                     cpu_rows[i] = row
                     i = i + 1
                 else
-                    if is_update == true then
+                    if is_update == true and j <= NUM_PROCESS_ROWS then
 
                         local pid = trim(string.sub(line, 1, 10))
                         local cpu = trim(string.sub(line, 12, 16))
@@ -279,21 +305,13 @@ local function worker(user_args)
                                 end) ) )
                         end
 
-                        awful.tooltip {
-                            objects = { row },
-                            mode = 'outside',
-                            preferred_positions = {'bottom'},
-                            timer_function = function()
-                                local text = cmd
-                                if process_info_max_length > 0 and text:len() > process_info_max_length then
-                                    text = text:sub(0, process_info_max_length - 3) .. '...'
-                                end
-
-                                return text
-                                        :gsub('%s%-', '\n\t-') -- put arguments on a new line
-                                        :gsub(':/', '\n\t\t:/') -- java classpath uses : to separate jars
-                            end,
-                        }
+                        -- Detach pre-created tooltip from old row and attach to new row
+                        if tooltip_attached_rows[j] then
+                            process_tooltips[j]:remove_from_object(tooltip_attached_rows[j])
+                        end
+                        process_tooltips[j]:add_to_object(row)
+                        tooltip_attached_rows[j] = row
+                        process_cmd_texts[j] = cmd
 
                         process_rows[j] = row
 
